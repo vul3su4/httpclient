@@ -6,6 +6,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"time"
+	"fmt"
 )
 
 type Config struct{
@@ -75,4 +76,61 @@ func New(cfg Config) (*Client, error) {
 	}
 
 	return c, nil
+}
+
+func (c *Client) SetCookie(rawURL, name, value string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+	c.http.Jar.SetCookies(u, []*http.Cookie{
+		{Name: name, Value: value, Path: "/"},
+	})
+	return nil
+}
+
+func (c *Client) DeleteCookie(rawURL, name string) error {
+    u, err := url.Parse(rawURL)
+    if err != nil {
+        return err
+    }
+
+    // MaxAge < 0 represents deleting the cookie
+    c.http.Jar.SetCookies(u, []*http.Cookie{
+        {
+            Name:    name,
+            Value:   "",
+            Path:    "/",
+            MaxAge:  -1,
+            Expires: time.Unix(0, 0),
+        },
+    })
+    return nil
+}
+
+func (c *Client) DumpCookies(rawURL string) error {
+    u, err := url.Parse(rawURL)
+    if err != nil {
+        return err
+    }
+
+    cookies := c.http.Jar.Cookies(u)
+    if len(cookies) == 0 {
+        fmt.Println("[DumpCookies] (no cookies)")
+        return nil
+    }
+
+    fmt.Println("[DumpCookies]")
+    for _, ck := range cookies {
+        fmt.Printf("  %s=%s\n", ck.Name, ck.Value)
+    }
+    return nil
+}
+
+func (c *Client) GetCookies(rawURL string) ([]*http.Cookie, error) {
+    u, err := url.Parse(rawURL)
+    if err != nil {
+        return nil, err
+    }
+    return c.http.Jar.Cookies(u), nil
 }
